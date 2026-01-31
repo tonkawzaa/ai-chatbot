@@ -61,3 +61,12 @@ export interface GoogleDriveFile {
   size: string;
   modifiedTime: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  sources?: { fileName: string; content: string }[];
+}
+

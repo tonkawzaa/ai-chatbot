@@ -136,3 +136,44 @@ const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
 const data = await pdfParse(pdfBuffer);
 console.log(data.text);
 ```
+
+## RAG Chat Feature
+
+The application includes a RAG (Retrieval-Augmented Generation) chat interface that allows users to ask questions and receive AI-generated answers based on documents stored in Pinecone.
+
+### How It Works
+
+1. **User Query**: User types a question in the chat interface
+2. **Embedding Generation**: The query is converted to a vector embedding using Gemini's embedding model
+3. **Context Retrieval**: Pinecone is queried for the top 5 most similar document chunks
+4. **Response Generation**: Gemini processes the query with retrieved context and streams the response
+5. **Display**: Response is displayed in real-time with Markdown formatting
+
+### API Endpoint
+
+**POST** `/api/chat`
+
+Request body:
+
+```json
+{
+  "message": "ผู้ใช้ถามอะไร?"
+}
+```
+
+Response: Streaming text response with UTF-8 encoding.
+
+### Model Fallback
+
+The chat API uses a model fallback strategy:
+
+1. Primary: `gemini-2.0-flash-lite`
+2. Fallback: `gemini-2.0-flash`
+
+This ensures reliability when rate limits are hit on the primary model.
+
+### Error Handling
+
+- **400**: Missing or invalid message
+- **429**: Rate limit exceeded (Thai error message returned)
+- **500**: General processing error
