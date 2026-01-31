@@ -120,3 +120,19 @@ The feature is implemented in `app/api/process-files/route.ts`.
 
 To trigger processing, you can send a POST request to `/api/process-files`.
 (Note: The UI button for this was removed per user request, but the API remains functional).
+
+### PDF Parsing
+
+The project uses `pdf-parse@1.1.1` for extracting text from PDF files. Important notes:
+
+- **Import Path**: Use `pdf-parse/lib/pdf-parse.js` directly instead of `pdf-parse` to avoid a known issue where the library tries to load a non-existent test file.
+- **Why v1.1.1**: Version 2.x uses `pdfjs-dist` which requires worker files that don't work well in Next.js server-side environments.
+- **Type Declarations**: Custom type declarations are in `types/pdf-parse.d.ts`.
+
+Example usage:
+
+```typescript
+const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
+const data = await pdfParse(pdfBuffer);
+console.log(data.text);
+```

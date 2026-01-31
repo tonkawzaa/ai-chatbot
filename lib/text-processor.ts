@@ -12,10 +12,10 @@ export async function extractTextFromFile(
   try {
     // Handle different file types
     if (mimeType === 'application/pdf') {
-      // Dynamic import for pdf-parse v2
-      const { PDFParse } = await import('pdf-parse');
-      const parser = new PDFParse({ data: content });
-      const data = await parser.getText();
+      // Dynamic import for pdf-parse v1 - use lib/pdf-parse.js directly to avoid test file loading issue
+      // See: https://github.com/modesty/pdf-parse/issues/24
+      const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+      const data = await pdfParse(content);
       return data.text;
     } else if (
       mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
