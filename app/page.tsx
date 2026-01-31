@@ -1,22 +1,14 @@
 "use client";
 
+import { useState } from 'react';
+import FileProcessingModal from '@/components/FileProcessingModal';
+
 export default function Home() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   return (
     <div className="flex h-screen bg-black text-white">
       {/* Sidebar */}
       <aside className="w-12 bg-black border-r border-white/10 flex flex-col items-center py-3 gap-6">
-        {/* Hamburger Menu */}
-        <button className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        {/* Gemini Logo */}
-        <div className="text-xs font-semibold text-gray-400">
-          Gemini
-        </div>
-
         {/* New Chat Icon */}
         <button className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors mt-auto">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,14 +84,11 @@ export default function Home() {
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-3 justify-center">
             {[
-              { icon: "🎨", label: "Create image" },
-              { icon: "✍️", label: "Write anything" },
-              { icon: "📚", label: "Help me learn" },
-              { icon: "🎬", label: "Create video" },
-              { icon: "⚡", label: "Boost my day" },
+              { icon: "", label: "Read File", onClick: () => setIsModalOpen(true) },
             ].map((action, i) => (
               <button
                 key={i}
+                onClick={action.onClick}
                 className="flex items-center gap-2 px-4 py-2 bg-[#1E1E1E] hover:bg-[#252525] border border-white/10 rounded-full transition-colors text-sm"
               >
                 <span>{action.icon}</span>
@@ -109,6 +98,12 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* File Processing Modal */}
+      <FileProcessingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }
