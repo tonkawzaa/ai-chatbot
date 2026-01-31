@@ -12,11 +12,9 @@ export async function extractTextFromFile(
   try {
     // Handle different file types
     if (mimeType === 'application/pdf') {
-      // Dynamic import for pdf-parse (CommonJS module)
-      const pdfModule = await import('pdf-parse');
-      // The actual parsing function is PDFParse (not a default export)
-      const pdfParse = (pdfModule as any).PDFParse;
-
+      // Dynamic import for pdf-parse - use lib/pdf-parse.js directly to avoid test file loading issue
+      // See: https://github.com/modesty/pdf-parse/issues/24
+      const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
       const data = await pdfParse(content);
       return data.text;
     } else if (
