@@ -1,7 +1,42 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import FileProcessingModal from '@/components/FileProcessingModal';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for FileProcessingModal - loads only when needed (bundle optimization)
+const FileProcessingModal = dynamic(
+  () => import('@/components/FileProcessingModal'),
+  { ssr: false }
+);
+
+// Hoisted static JSX elements (rendering optimization)
+const PlusIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+  </svg>
+);
+
+const ArrowIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+  </svg>
+);
+
+const SpinnerIcon = (
+  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+  </svg>
+);
+
+// Loading dots for assistant messages
+const LoadingDots = (
+  <div className="flex items-center gap-2">
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+  </div>
+);
 
 interface Message {
   id: string;
@@ -95,15 +130,40 @@ export default function Home() {
           className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors mt-auto"
           title="New Chat"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
+          {PlusIcon}
         </button>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        {!hasMessages ? (
+        {hasMessages ? (
+          /* Chat Messages */
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="max-w-3xl mx-auto space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      message.role === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-[#1E1E1E] text-gray-100 border border-white/10'
+                    }`}
+                  >
+                    {message.role === 'assistant' && message.content === '' && isLoading ? (
+                      LoadingDots
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+        ) : (
           /* Welcome Screen */
           <div className="flex-1 flex items-center justify-center px-6">
             <div className="w-full max-w-3xl">
@@ -136,9 +196,7 @@ export default function Home() {
                       disabled={isLoading || !input.trim()}
                       className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors disabled:opacity-50"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
+                      {ArrowIcon}
                     </button>
                   </div>
                 </div>
@@ -156,41 +214,10 @@ export default function Home() {
               </div>
             </div>
           </div>
-        ) : (
-          /* Chat Messages */
-          <div className="flex-1 overflow-y-auto px-6 py-4">
-            <div className="max-w-3xl mx-auto space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-[#1E1E1E] text-gray-100 border border-white/10'
-                    }`}
-                  >
-                    {message.role === 'assistant' && message.content === '' && isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                    ) : (
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          </div>
         )}
 
         {/* Input Area (shown when in chat mode) */}
-        {hasMessages && (
+        {hasMessages ? (
           <div className="border-t border-white/10 p-4">
             <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
               <div className="bg-[#1E1E1E] rounded-xl border border-white/10 p-4 hover:bg-[#252525] transition-colors">
@@ -208,22 +235,13 @@ export default function Home() {
                     disabled={isLoading || !input.trim()}
                     className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors disabled:opacity-50"
                   >
-                    {isLoading ? (
-                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    )}
+                    {isLoading ? SpinnerIcon : ArrowIcon}
                   </button>
                 </div>
               </div>
             </form>
           </div>
-        )}
+        ) : null}
       </main>
 
       {/* File Processing Modal */}

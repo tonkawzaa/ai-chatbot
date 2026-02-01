@@ -12,6 +12,7 @@
     "@google/generative-ai": "^0.24.1",
     "@pinecone-database/pinecone": "^6.1.4",
     "googleapis": "^171.0.0",
+    "lru-cache": "^11.2.5",
     "mammoth": "^1.11.0",
     "next": "16.1.6",
     "pdf-parse": "^1.1.1",

@@ -4,23 +4,32 @@ import type { EmbeddingVector } from './types';
 const API_KEY = process.env.PINECONE_API_KEY!;
 const INDEX_NAME = process.env.PINECONE_INDEX_NAME || 'ai-chatbot-embeddings';
 
+// Singleton cache for Pinecone client and index (performance optimization)
+let pineconeClient: Pinecone | null = null;
+let cachedIndex: ReturnType<Pinecone['index']> | null = null;
+
 /**
- * Initialize Pinecone client
+ * Initialize Pinecone client (singleton pattern)
  */
 export function getPineconeClient() {
+  if (pineconeClient) return pineconeClient;
+
   if (!API_KEY) {
     throw new Error('PINECONE_API_KEY is not configured');
   }
 
-  return new Pinecone({
+  pineconeClient = new Pinecone({
     apiKey: API_KEY,
   });
+  return pineconeClient;
 }
 
 /**
- * Get or create Pinecone index
+ * Get or create Pinecone index (with caching)
  */
 export async function getOrCreateIndex() {
+  if (cachedIndex) return cachedIndex;
+
   const pc = getPineconeClient();
 
   try {
@@ -49,7 +58,8 @@ export async function getOrCreateIndex() {
       await new Promise(resolve => setTimeout(resolve, 10000));
     }
 
-    return pc.index(INDEX_NAME);
+    cachedIndex = pc.index(INDEX_NAME);
+    return cachedIndex;
   } catch (error) {
     console.error('Error getting/creating Pinecone index:', error);
     throw error;

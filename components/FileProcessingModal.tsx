@@ -96,9 +96,9 @@ export default function FileProcessingModal({ isOpen, onClose }: FileProcessingM
             <div className="text-center py-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
               <p className="text-gray-300">Processing files...</p>
-              {progress?.currentFile && (
+              {progress?.currentFile ? (
                 <p className="text-sm text-gray-500 mt-2">Current: {progress.currentFile}</p>
-              )}
+              ) : null}
             </div>
           )}
 

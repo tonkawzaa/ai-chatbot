@@ -1,8 +1,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { LRUCache } from 'lru-cache';
 import type { TextChunk } from './types';
 
 const API_KEY = process.env.GOOGLE_AI_API_KEY!;
 const MODEL_NAME = 'text-embedding-004';
+
+// LRU cache for embeddings - avoids regenerating for identical text (cross-request caching)
+const embeddingCache = new LRUCache<string, number[]>({
+  max: 500,
+  ttl: 60 * 60 * 1000, // 1 hour
+});
 
 /**
  * Initialize Gemini AI client
@@ -19,6 +26,14 @@ export function getGeminiClient() {
  * Returns a 768-dimensional vector
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
+  // Check cache first (use first 1000 chars as key for memory efficiency)
+  const cacheKey = text.slice(0, 1000);
+  const cached = embeddingCache.get(cacheKey);
+  if (cached) {
+    console.log('Embedding cache hit');
+    return cached;
+  }
+
   const genAI = getGeminiClient();
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
@@ -30,6 +45,8 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       throw new Error(`Expected 768-dimensional vector, got ${embedding.values?.length ?? 0}`);
     }
 
+    // Cache the result before returning
+    embeddingCache.set(cacheKey, embedding.values);
     return embedding.values;
   } catch (error) {
     console.error('Error generating embedding:', error);
