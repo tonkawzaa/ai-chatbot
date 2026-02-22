@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { generateEmbedding } from '@/lib/gemini-embeddings';
+import { generateQueryEmbedding } from '@/lib/gemini-embeddings';
 import { querySimilarVectors } from '@/lib/pinecone-client';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Generate embedding for user query
     console.log('Generating embedding for query:', message);
-    const queryEmbedding = await generateEmbedding(message);
+    const queryEmbedding = await generateQueryEmbedding(message);
 
     // 2. Search Pinecone for relevant context
     console.log('Searching Pinecone for relevant context...');

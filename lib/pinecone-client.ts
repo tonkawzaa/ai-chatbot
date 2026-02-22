@@ -40,10 +40,10 @@ export async function getOrCreateIndex() {
     if (!indexExists) {
       console.log(`Creating Pinecone index: ${INDEX_NAME}`);
       
-      // Create new index with 768 dimensions (Gemini text-embedding-004)
+      // Create new index with 3072 dimensions (Gemini gemini-embedding-001)
       await pc.createIndex({
         name: INDEX_NAME,
-        dimension: 768,
+        dimension: 3072,
         metric: 'cosine',
         spec: {
           serverless: {

@@ -1,9 +1,10 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, TaskType } from '@google/generative-ai';
 import { LRUCache } from 'lru-cache';
 import type { TextChunk } from './types';
 
 const API_KEY = process.env.GOOGLE_AI_API_KEY!;
-const MODEL_NAME = 'text-embedding-004';
+// gemini-embedding-001 is the available embedding model for this API key
+const EMBEDDING_MODELS = ['gemini-embedding-001'];
 
 // LRU cache for embeddings - avoids regenerating for identical text (cross-request caching)
 const embeddingCache = new LRUCache<string, number[]>({
@@ -35,23 +36,68 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   }
 
   const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+  let lastError: unknown;
 
-  try {
-    const result = await model.embedContent(text);
-    const embedding = result.embedding;
-    
-    if (!embedding.values || embedding.values.length !== 768) {
-      throw new Error(`Expected 768-dimensional vector, got ${embedding.values?.length ?? 0}`);
+  for (const modelName of EMBEDDING_MODELS) {
+    try {
+      console.log(`Trying embedding model: ${modelName}`);
+      const model = genAI.getGenerativeModel({ model: modelName });
+
+      // Pass content as structured object with taskType to avoid 404 on some API keys
+      const result = await model.embedContent({
+        content: { role: 'user', parts: [{ text }] },
+        taskType: TaskType.RETRIEVAL_DOCUMENT,
+      });
+      const embedding = result.embedding;
+
+      if (!embedding.values || embedding.values.length === 0) {
+        throw new Error(`Empty embedding returned from ${modelName}`);
+      }
+
+      console.log(`Embedding generated with ${modelName} (${embedding.values.length} dims)`);
+      embeddingCache.set(cacheKey, embedding.values);
+      return embedding.values;
+    } catch (error) {
+      console.error(`Embedding model ${modelName} failed:`, error);
+      lastError = error;
+      // Continue to next model
     }
-
-    // Cache the result before returning
-    embeddingCache.set(cacheKey, embedding.values);
-    return embedding.values;
-  } catch (error) {
-    console.error('Error generating embedding:', error);
-    throw new Error(`Failed to generate embedding: ${error}`);
   }
+
+  throw new Error(`Failed to generate embedding with all models: ${lastError}`);
+}
+
+/**
+ * Generate embedding for a query (uses RETRIEVAL_QUERY taskType for better retrieval accuracy)
+ */
+export async function generateQueryEmbedding(text: string): Promise<number[]> {
+  const cacheKey = `query:${text.slice(0, 1000)}`;
+  const cached = embeddingCache.get(cacheKey);
+  if (cached) return cached;
+
+  const genAI = getGeminiClient();
+  let lastError: unknown;
+
+  for (const modelName of EMBEDDING_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.embedContent({
+        content: { role: 'user', parts: [{ text }] },
+        taskType: TaskType.RETRIEVAL_QUERY,
+      });
+      const embedding = result.embedding;
+      if (!embedding.values || embedding.values.length === 0) {
+        throw new Error(`Empty embedding returned from ${modelName}`);
+      }
+      embeddingCache.set(cacheKey, embedding.values);
+      return embedding.values;
+    } catch (error) {
+      console.error(`Query embedding model ${modelName} failed:`, error);
+      lastError = error;
+    }
+  }
+
+  throw new Error(`Failed to generate query embedding: ${lastError}`);
 }
 
 /**
