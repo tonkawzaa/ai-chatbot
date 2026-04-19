@@ -62,7 +62,7 @@ ${message}
     const genAI = new GoogleGenerativeAI(API_KEY);
     
     // Try different models in order of preference
-    const models = ['gemini-2.0-flash-lite', 'gemini-2.0-flash'];
+    const models = ['gemini-2.5-flash', 'gemini-flash-latest'];
     let result;
     let lastError;
     
