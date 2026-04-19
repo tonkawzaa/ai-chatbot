@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, TaskType } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { LRUCache } from 'lru-cache';
 import type { TextChunk } from './types';
 
@@ -19,7 +19,7 @@ export function getGeminiClient() {
   if (!API_KEY) {
     throw new Error('GOOGLE_AI_API_KEY is not configured');
   }
-  return new GoogleGenerativeAI(API_KEY);
+  return new GoogleGenAI({ apiKey: API_KEY });
 }
 
 /**
@@ -41,22 +41,23 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   for (const modelName of EMBEDDING_MODELS) {
     try {
       console.log(`Trying embedding model: ${modelName}`);
-      const model = genAI.getGenerativeModel({ model: modelName });
-
-      // Pass content as structured object with taskType to avoid 404 on some API keys
-      const result = await model.embedContent({
-        content: { role: 'user', parts: [{ text }] },
-        taskType: TaskType.RETRIEVAL_DOCUMENT,
+      // Pass content as structured object with taskType
+      const result = await genAI.models.embedContent({
+        model: modelName,
+        contents: text,
+        config: {
+          taskType: 'RETRIEVAL_DOCUMENT',
+        }
       });
-      const embedding = result.embedding;
+      const values = result.embeddings?.[0]?.values;
 
-      if (!embedding.values || embedding.values.length === 0) {
+      if (!values || values.length === 0) {
         throw new Error(`Empty embedding returned from ${modelName}`);
       }
 
-      console.log(`Embedding generated with ${modelName} (${embedding.values.length} dims)`);
-      embeddingCache.set(cacheKey, embedding.values);
-      return embedding.values;
+      console.log(`Embedding generated with ${modelName} (${values.length} dims)`);
+      embeddingCache.set(cacheKey, values);
+      return values;
     } catch (error) {
       console.error(`Embedding model ${modelName} failed:`, error);
       lastError = error;
@@ -80,17 +81,19 @@ export async function generateQueryEmbedding(text: string): Promise<number[]> {
 
   for (const modelName of EMBEDDING_MODELS) {
     try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.embedContent({
-        content: { role: 'user', parts: [{ text }] },
-        taskType: TaskType.RETRIEVAL_QUERY,
+      const result = await genAI.models.embedContent({
+        model: modelName,
+        contents: text,
+        config: {
+          taskType: 'RETRIEVAL_QUERY',
+        }
       });
-      const embedding = result.embedding;
-      if (!embedding.values || embedding.values.length === 0) {
+      const values = result.embeddings?.[0]?.values;
+      if (!values || values.length === 0) {
         throw new Error(`Empty embedding returned from ${modelName}`);
       }
-      embeddingCache.set(cacheKey, embedding.values);
-      return embedding.values;
+      embeddingCache.set(cacheKey, values);
+      return values;
     } catch (error) {
       console.error(`Query embedding model ${modelName} failed:`, error);
       lastError = error;

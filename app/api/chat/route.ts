@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { generateQueryEmbedding } from '@/lib/gemini-embeddings';
 import { querySimilarVectors } from '@/lib/pinecone-client';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 const API_KEY = process.env.GOOGLE_AI_API_KEY!;
 
@@ -59,18 +59,31 @@ ${message}
 ## คำตอบ:`;
 
     // 5. Stream response from Gemini (try multiple models)
-    const genAI = new GoogleGenerativeAI(API_KEY);
+    const genAI = new GoogleGenAI({ apiKey: API_KEY });
     
     // Try different models in order of preference
-    const models = ['gemini-2.5-flash', 'gemini-flash-latest'];
+    const models = ['gemini-3.1-flash-lite-preview', 'gemini-2.5-flash'];
     let result;
     let lastError;
     
     for (const modelName of models) {
       try {
         console.log(`Trying model: ${modelName}`);
-        const model = genAI.getGenerativeModel({ model: modelName });
-        result = await model.generateContentStream(prompt);
+        // Dynamically configure thinking based on the model's supported method
+        const config: any = {
+          thinkingConfig: { includeThoughts: true }
+        };
+        if (modelName.includes('gemma-4') || modelName.includes('gemini-3')) {
+          config.thinkingConfig.thinkingLevel = 'high';
+        } else if (modelName.includes('gemini-2.5')) {
+          config.thinkingConfig.thinkingBudget = -1;
+        }
+
+        result = await genAI.models.generateContentStream({
+          model: modelName,
+          contents: prompt,
+          config
+        });
         console.log(`Success with model: ${modelName}`);
         break;
       } catch (error: unknown) {
@@ -100,8 +113,8 @@ ${message}
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
+          for await (const chunk of result) {
+            const text = chunk.text;
             if (text) {
               controller.enqueue(encoder.encode(text));
             }
